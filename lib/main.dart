@@ -31,9 +31,13 @@ class PushNotification {
   PushNotification({
     this.title,
     this.body,
+    this.dataTitle,
+    this.dataBody,
   });
   String? title;
   String? body;
+  String? dataTitle;
+  String? dataBody;
 }
 
 class _HomePageState extends State {
@@ -41,12 +45,55 @@ class _HomePageState extends State {
   late int _totalNotifications;
   PushNotification? _notificationInfo;
 
+
+
+  // 그러나 앱이 종료된 상태이고 알림을 탭하여 다시 가져온 경우 이 메서드는 정보를 검색하기에 충분하지 않습니다.
+  // 호출된 메서드를 정의하고 여기에 다음 코드를 추가합니다.initState()checkForInitialMessage()
+  // For handling notification when the app is in terminated state
+  checkForInitialMessage() async {
+    await Firebase.initializeApp();
+    RemoteMessage? initialMessage =
+        await FirebaseMessaging.instance.getInitialMessage();
+
+    if (initialMessage != null) {
+      PushNotification notification = PushNotification(
+        title: initialMessage.notification?.title,
+        body: initialMessage.notification?.body,
+      );
+      setState(() {
+        _notificationInfo = notification;
+        _totalNotifications++;
+      });
+    }
+  }
+
   @override
   void initState() {
     _totalNotifications = 0;
+
+    // 앱이 백그라운드에 있고 알림을 탭할 때 작업을 처리하려면 메서드 에 다음 코드를 추가해야 합니다.initState()
+    // For handling notification when the app is in background
+    // but not terminated
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      PushNotification notification = PushNotification(
+        title: message.notification?.title,
+        body: message.notification?.body,
+      );
+      setState(() {
+        _notificationInfo = notification;
+        _totalNotifications++;
+      });
+    });
+    // end add onMessageOpenedApp.listen
+    // Call here
+    checkForInitialMessage();
+
     super.initState();
   }
 
+Future _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  print("Handling a background message: ${message.messageId}");
+}
 
 void registerNotification() async {
   // 1. Initialize the Firebase app
@@ -54,6 +101,8 @@ void registerNotification() async {
 
   // 2. Instantiate Firebase Messaging
   _messaging = FirebaseMessaging.instance;
+  // Add the following line
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   // 3. On iOS, this helps to take the user permissions
   NotificationSettings settings = await _messaging.requestPermission(
@@ -71,6 +120,8 @@ void registerNotification() async {
       PushNotification notification = PushNotification(
         title: message.notification?.title,
         body: message.notification?.body,
+        dataTitle: message.data['title'],
+        dataBody: message.data['body'],
       );
 
       setState(() {
@@ -122,7 +173,7 @@ void registerNotification() async {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'TITLE: ${_notificationInfo!.title}',
+                  'TITLE: ${_notificationInfo!.dataTitle ?? _notificationInfo!.title}',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16.0,
@@ -130,7 +181,7 @@ void registerNotification() async {
                 ),
                 SizedBox(height: 8.0),
                 Text(
-                  'BODY: ${_notificationInfo!.body}',
+                  'BODY: ${_notificationInfo!.dataBody ?? _notificationInfo!.body}',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16.0,
