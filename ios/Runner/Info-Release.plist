@@ -52,5 +52,11 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	<!-- Background Fetching -->
+	<!-- Error : Could not register as server for FlutterObservatoryPublisher. -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+	</array>
 </dict>
 </plist>
