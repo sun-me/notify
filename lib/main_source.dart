@@ -4,29 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:notify/model/push_notification.dart';
 import 'package:overlay_support/overlay_support.dart';
 
-import 'package:hooks_riverpod/hooks_riverpod.dart';
-
 import 'notify/notification_badge.dart';
 
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   print("Handling a background message: ${message.messageId}");
 }
 
-final _notificationInfo = Provider<PushNotification>((ref) {
-  return PushNotification( body: '', dataBody: '', dataTitle: '', title: '');
-});
-
-void main() {
-  runApp(
-    // Adding ProviderScope enables Riverpod for the entire project
-    const ProviderScope(child: MyApp()),
-  );
+void main() async {
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-
-  const MyApp({super.key});
-
   @override
   Widget build(BuildContext context) {
     return OverlaySupport(
@@ -36,16 +24,21 @@ class MyApp extends StatelessWidget {
           primarySwatch: Colors.deepPurple,
         ),
         debugShowCheckedModeBanner: false,
-        home: Home(),
+        home: HomePage(),
       ),
     );
   }
 }
 
-class Home extends HookConsumerWidget {
-  late final FirebaseMessaging _messaging;
-  late int _totalNotifications = 0;
+class HomePage extends StatefulWidget {
+  @override
+  _HomePageState createState() => _HomePageState();
+}
 
+class _HomePageState extends State<HomePage> {
+  late final FirebaseMessaging _messaging;
+  late int _totalNotifications;
+  PushNotification? _notificationInfo;
 
   void registerNotification() async {
     await Firebase.initializeApp();
@@ -75,10 +68,10 @@ class Home extends HookConsumerWidget {
           dataBody: message.data['body'],
         );
 
-        // setState(() {
-        //   _notificationInfo = notification;
-        //   _totalNotifications++;
-        // });
+        setState(() {
+          _notificationInfo = notification;
+          _totalNotifications++;
+        });
 
         if (_notificationInfo != null) {
           // For displaying the notification as an overlay
@@ -100,7 +93,7 @@ class Home extends HookConsumerWidget {
   checkForInitialMessage() async {
     await Firebase.initializeApp();
     RemoteMessage? initialMessage =
-    await FirebaseMessaging.instance.getInitialMessage();
+        await FirebaseMessaging.instance.getInitialMessage();
 
     if (initialMessage != null) {
       PushNotification notification = PushNotification(
@@ -110,49 +103,49 @@ class Home extends HookConsumerWidget {
         dataBody: initialMessage.data['body'],
       );
 
-      // setState(() {
-      //   _notificationInfo = notification;
-      //   _totalNotifications++;
-      // });
+      setState(() {
+        _notificationInfo = notification;
+        _totalNotifications++;
+      });
     }
   }
 
-  // @override
-  // void initState() {
-  //   _totalNotifications = 0;
-  //   registerNotification();
-  //   checkForInitialMessage();
+  @override
+  void initState() {
+    _totalNotifications = 0;
+    registerNotification();
+    checkForInitialMessage();
 
     // For handling notification when the app is in background
     // but not terminated
-    // FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-    //   PushNotification notification = PushNotification(
-    //     title: message.notification?.title,
-    //     body: message.notification?.body,
-    //     dataTitle: message.data['title'],
-    //     dataBody: message.data['body'],
-    //   );
-    //
-    //   // setState(() {
-    //   //   _notificationInfo = notification;
-    //   //   _totalNotifications++;
-    //   // });
-    // });
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      PushNotification notification = PushNotification(
+        title: message.notification?.title,
+        body: message.notification?.body,
+        dataTitle: message.data['title'],
+        dataBody: message.data['body'],
+      );
 
-  //   super.initState();
-  // }
+      setState(() {
+        _notificationInfo = notification;
+        _totalNotifications++;
+      });
+    });
+
+    super.initState();
+  }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notify'),
+        title: Text('Notify'),
         brightness: Brightness.dark,
       ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text(
+          Text(
             'App for capturing Firebase Push Notifications',
             textAlign: TextAlign.center,
             style: TextStyle(
@@ -160,33 +153,34 @@ class Home extends HookConsumerWidget {
               fontSize: 20,
             ),
           ),
-          const SizedBox(height: 16.0),
+          SizedBox(height: 16.0),
           NotificationBadge(totalNotifications: _totalNotifications),
-          const SizedBox(height: 16.0),
+          SizedBox(height: 16.0),
           _notificationInfo != null
               ? Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'TITLE: ${_notificationInfo!.dataTitle ?? _notificationInfo!.title}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16.0,
-                ),
-              ),
-              const SizedBox(height: 8.0),
-              Text(
-                'BODY: ${_notificationInfo!.dataBody ?? _notificationInfo!.body}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16.0,
-                ),
-              ),
-            ],
-          )
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'TITLE: ${_notificationInfo!.dataTitle ?? _notificationInfo!.title}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16.0,
+                      ),
+                    ),
+                    SizedBox(height: 8.0),
+                    Text(
+                      'BODY: ${_notificationInfo!.dataBody ?? _notificationInfo!.body}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16.0,
+                      ),
+                    ),
+                  ],
+                )
               : Container(),
         ],
       ),
     );
   }
 }
+
