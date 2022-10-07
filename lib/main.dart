@@ -23,12 +23,12 @@ void main() {
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends HookConsumerWidget {
 
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return OverlaySupport(
       child: MaterialApp(
         title: 'Notify',
@@ -36,7 +36,7 @@ class MyApp extends StatelessWidget {
           primarySwatch: Colors.deepPurple,
         ),
         debugShowCheckedModeBanner: false,
-        home: Home(),
+        home: Home(ref),
       ),
     );
   }
@@ -45,6 +45,10 @@ class MyApp extends StatelessWidget {
 class Home extends HookConsumerWidget {
   late final FirebaseMessaging _messaging;
   late int _totalNotifications = 0;
+
+  Home(this.refs);
+
+  final WidgetRef refs;
 
 
   void registerNotification() async {
@@ -83,9 +87,9 @@ class Home extends HookConsumerWidget {
         if (_notificationInfo != null) {
           // For displaying the notification as an overlay
           showSimpleNotification(
-            Text(_notificationInfo!.title!),
+            Text(refs.watch(_notificationInfo)!.title!),
             leading: NotificationBadge(totalNotifications: _totalNotifications),
-            subtitle: Text(_notificationInfo!.body!),
+            subtitle: Text(refs.watch(_notificationInfo)!.body!),
             background: Colors.cyan.shade700,
             duration: Duration(seconds: 2),
           );
@@ -168,7 +172,7 @@ class Home extends HookConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'TITLE: ${_notificationInfo!.dataTitle ?? _notificationInfo!.title}',
+                'TITLE: ${ ref.watch(_notificationInfo).dataTitle ?? ref.watch(_notificationInfo)!.title}',
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16.0,
@@ -176,7 +180,7 @@ class Home extends HookConsumerWidget {
               ),
               const SizedBox(height: 8.0),
               Text(
-                'BODY: ${_notificationInfo!.dataBody ?? _notificationInfo!.body}',
+                'BODY: ${ ref.watch(_notificationInfo).dataBody ?? ref.watch(_notificationInfo)!.body}',
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16.0,
