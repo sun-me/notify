@@ -1,22 +1,26 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:notify/model/push_notification.dart';
 import 'package:flutter/material.dart';
 import 'package:overlay_support/overlay_support.dart';
 
+import 'notification_badge.dart';
+
 class NotificationRegister {
 
-  Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  static Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     print("Handling a background message: ${message.messageId}");
   }
 
-  void registerNotification() async {
+  static void registerNotification( WidgetRef ref, FirebaseMessaging fbMessaging,
+      dynamic pNotificationInfo, dynamic pTotalNotifications) async {
     await Firebase.initializeApp();
-    _messaging = FirebaseMessaging.instance;
+    fbMessaging = FirebaseMessaging.instance;
 
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-    NotificationSettings settings = await _messaging.requestPermission(
+    NotificationSettings settings = await fbMessaging.requestPermission(
       alert: true,
       badge: true,
       provisional: false,
@@ -38,18 +42,20 @@ class NotificationRegister {
           dataBody: message.data['body'],
         );
 
-        setState(() {
-          _notificationInfo = notification;
-          _totalNotifications++;
-        });
+        // setState(() {
+        //   _notificationInfo = notification;
 
-        if (_notificationInfo != null) {
+        ref.read(pNotificationInfo).update((state) => state = notification);
+          // _totalNotifications++;
+        // });
+
+        if (ref.read(pNotificationInfo) != null) {
           // For displaying the notification as an overlay
           // import 'package:overlay_support/overlay_support.dart';
           showSimpleNotification(
-            Text(_notificationInfo!.title!),
-            leading: NotificationBadge(totalNotifications: _totalNotifications),
-            subtitle: Text(_notificationInfo!.body!),
+            Text(ref.read(pNotificationInfo)!.title!),
+            leading: NotificationBadge(totalNotifications: ref.watch(pTotalNotifications)),
+            subtitle: Text(ref.read(pNotificationInfo)!.body!),
             background: Colors.cyan.shade700,
             duration: Duration(seconds: 2),
           );

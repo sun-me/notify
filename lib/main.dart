@@ -8,6 +8,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'notify/notification_badge.dart';
 
+import 'notify/notification_register.dart';
+
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   print("Handling a background message: ${message.messageId}");
 }
@@ -15,6 +17,10 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 final _notificationInfo = Provider<PushNotification>((ref) {
   return PushNotification( body: '', dataBody: '', dataTitle: '', title: '');
 });
+
+final _totalNotifications = Provider((ref) {
+  return 0;
+}) as int;
 
 void main() {
   runApp(
@@ -44,61 +50,14 @@ class MyApp extends HookConsumerWidget {
 
 class Home extends HookConsumerWidget {
   late final FirebaseMessaging _messaging;
-  late int _totalNotifications = 0;
+
 
   Home(this.refs);
 
   final WidgetRef refs;
 
-
-  void registerNotification() async {
-    await Firebase.initializeApp();
-    _messaging = FirebaseMessaging.instance;
-
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
-    NotificationSettings settings = await _messaging.requestPermission(
-      alert: true,
-      badge: true,
-      provisional: false,
-      sound: true,
-    );
-
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      print('User granted permission');
-
-      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        print(
-            'Message title: ${message.notification?.title}, body: ${message.notification?.body}, data: ${message.data}');
-
-        // Parse the message received
-        PushNotification notification = PushNotification(
-          title: message.notification?.title,
-          body: message.notification?.body,
-          dataTitle: message.data['title'],
-          dataBody: message.data['body'],
-        );
-
-        // setState(() {
-        //   _notificationInfo = notification;
-        //   _totalNotifications++;
-        // });
-
-        if (_notificationInfo != null) {
-          // For displaying the notification as an overlay
-          showSimpleNotification(
-            Text(refs.watch(_notificationInfo)!.title!),
-            leading: NotificationBadge(totalNotifications: _totalNotifications),
-            subtitle: Text(refs.watch(_notificationInfo)!.body!),
-            background: Colors.cyan.shade700,
-            duration: Duration(seconds: 2),
-          );
-        }
-      });
-    } else {
-      print('User declined or has not accepted permission');
-    }
-  }
+  // TODO 분리 했더니 실행 안됨
+  // NotificationRegister.registerNotification(this.refs, this._messaging, _notificationInfo, _totalNotifications);
 
   // For handling notification when the app is in terminated state
   checkForInitialMessage() async {
